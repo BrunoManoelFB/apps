@@ -1,6 +1,6 @@
-# Pesquisa de Preços — Compras.gov.br
+# Pesquisa de Preços — Compras.gov.br (adaptado por Bruno Manoel)
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://suportedadoslivres.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://6u9u9kh8bgu3hktkpvk723.streamlit.app/)
 
 Aplicação web desenvolvida em **Streamlit** para consulta e exportação de dados de pesquisa de preços do portal [Compras.gov.br](https://www.gov.br/compras).
 
@@ -70,7 +70,7 @@ deactivate
 
 Acesse diretamente pelo navegador, sem necessidade de instalação:
 
-**[https://suportedadoslivres.streamlit.app/](https://suportedadoslivres.streamlit.app/)**
+**[https://suportedadoslivres.streamlit.app/](https://6u9u9kh8bgu3hktkpvk723.streamlit.app/)**
 
 ### Local
 
@@ -113,39 +113,3 @@ http://localhost:8501
 
 ---
 
-## Equipe
-
-**Coordenação de Transparência e Informações Gerenciais — COTIN**
-
-**Coordenador:**
-- Magnum Costa de Oliveira
-
-**Membros:**
-- Guilherme Fonseca De Noronha Rocha
-- Stefano Terci Gasperazzo
-- José Maria De Melo Junior
-- Páblio de Sousa Lourenço
-- Flavio Henrique Martins
-
----
-
-## Desenvolvedores
-
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/magnumcosta" target="_blank">
-        <img src="https://github.com/magnumcosta.png" width="120" alt="Magnum Costa" style="border-radius: 50%"/><br/>
-        <b>Magnum Costa de Oliveira</b>
-      </a><br/>
-      <sub>Coordenador · <a href="https://github.com/magnumcosta">@magnumcosta</a></sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/melojrx" target="_blank">
-        <img src="https://github.com/melojrx.png" width="120" alt="Junior Melo" style="border-radius: 50%"/><br/>
-        <b>José Maria De Melo Junior</b>
-      </a><br/>
-      <sub>Desenvolvedor · <a href="https://github.com/melojrx">@melojrx</a></sub>
-    </td>
-  </tr>
-</table>
