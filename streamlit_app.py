@@ -64,33 +64,79 @@ RENOMEAR_COLUNAS = {
     'descricaoDetalhadaItem':      'Descrição Detalhada',
 }
 
+# Colunas que SEMPRE devem aparecer (não podem ser removidas)
+COLUNAS_OBRIGATORIAS = [
+    'ID Compra',
+    'ID Item',
+    'Nº Item',
+    'Descrição do Item',
+    'Cód. Catálogo',
+    'CNPJ/CPF Fornecedor',
+    'Fornecedor',
+    'Data da Compra'
+]
 
-def obter_itens(tipo_item, codigo_item_catalogo, pagina, tamanho_pagina):
-    """Consulta a API do Compras.gov.br e retorna os itens encontrados."""
+def obter_itens(tipo_item, codigo_item_catalogo, pagina, tamanho_pagina, data_inicio=None, data_fim=None):
+    """Consulta a API do Compras.gov.br com filtro de data opcional."""
     url = CONSULTAR_MATERIAL_URL if tipo_item == 'Material' else CONSULTAR_SERVICO_URL
+    
+    # ATUALIZAÇÃO AQUI: A API mudou os parâmetros esperados
     params = {
         'pagina': pagina,
         'tamanhoPagina': tamanho_pagina,
-        'codigoItemCatalogo': codigo_item_catalogo
+        'tipo': 'codigoItemCatalogo',           # Passa a ser obrigatório avisar o tipo de código
+        'codigo': codigo_item_catalogo.strip()  # Passa apenas 'codigo' em vez de 'codigoItemCatalogo'
     }
+
+    # Adiciona filtro de data apenas se o usuário informou
+    if data_inicio:
+        params['dataCompraInicio'] = data_inicio.strftime('%Y-%m-%d')
+    if data_fim:
+        params['dataCompraFim'] = data_fim.strftime('%Y-%m-%d')
+
     try:
         response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         json_response = response.json()
+        
         itens = json_response.get('resultado', [])
         paginas_restantes = json_response.get('paginasRestantes', 0)
         total_paginas = json_response.get('totalPaginas', 0)
+        
         return itens, paginas_restantes, total_paginas
-    except requests.exceptions.Timeout:
-        st.error("A requisição excedeu o tempo limite. Tente novamente.")
+    except requests.exceptions.HTTPError as err:
+        st.error(f"Erro na API: {err.response.status_code} - {err.response.text}")
         return [], 0, 0
-    except requests.exceptions.HTTPError as e:
-        st.error(f"Erro HTTP na consulta: {e}")
+    except Exception as e:
+        st.error(f"Erro na consulta: {e}")
         return [], 0, 0
-    except requests.exceptions.RequestException as e:
-        st.error(f"Erro ao realizar a requisição: {e}")
-        return [], 0, 0
-
+    
+@st.dialog("Selecionar Colunas para Exibição")
+def selecionar_colunas_dialog():
+    """Modal para o usuário escolher quais colunas quer ver."""
+    todas_colunas = list(RENOMEAR_COLUNAS.values())  # todas as colunas traduzidas
+    
+    # Recupera seleção anterior ou usa todas
+    if 'colunas_selecionadas' not in st.session_state:
+        st.session_state['colunas_selecionadas'] = todas_colunas.copy()
+    
+    # Multiselect - desabilita as obrigatórias (mas elas sempre aparecem)
+    colunas_escolhidas = st.multiselect(
+        "Escolha as colunas que deseja visualizar:",
+        options=todas_colunas,
+        default=st.session_state['colunas_selecionadas'],
+        help="As colunas em negrito são obrigatórias e não podem ser removidas."
+    )
+    
+    # Garante que as obrigatórias sempre estejam presentes
+    for obr in COLUNAS_OBRIGATORIAS:
+        if obr not in colunas_escolhidas:
+            colunas_escolhidas.append(obr)
+    
+    if st.button("Salvar seleção", type="primary"):
+        st.session_state['colunas_selecionadas'] = colunas_escolhidas
+        st.rerun()   # fecha o modal e atualiza
+    
 # =============================================================================
 # Interface
 # =============================================================================
@@ -103,13 +149,32 @@ st.markdown(
 
 st.divider()
 
-col1, col2 = st.columns(2)
+# ====================== FILTROS ======================
+col1, col2, col3 = st.columns([1.5, 1.5, 1.5])
+
 with col1:
     tipo_item = st.selectbox("Tipo de item", ['Material', 'Serviço'], key='tipo_item')
     codigo_item_catalogo = st.text_input("Código do Item de Catálogo", value="", key='codigo_item_catalogo')
+
 with col2:
+    data_inicio = st.date_input(
+        "Data Inicial",
+        value=None,           # None = sem filtro
+        format="DD/MM/YYYY"
+    )
+    data_fim = st.date_input(
+        "Data Final",
+        value=None,
+        format="DD/MM/YYYY"
+    )
+
+with col3:
     pagina = st.number_input("Página", min_value=1, value=1, step=1)
-    tamanho_pagina = st.number_input("Itens por página", min_value=10, value=500, step=10)
+    tamanho_pagina = st.number_input("Itens por página", min_value=10, value=50, step=10)
+
+# Botão para configurar colunas
+if st.button("⚙️ Configurar colunas visíveis", help="Escolha quais colunas aparecerão na tabela e no CSV"):
+    selecionar_colunas_dialog()
 
 if st.button('Consultar', type='primary'):
     # Limpa resultado anterior a cada nova consulta
@@ -122,7 +187,12 @@ if st.button('Consultar', type='primary'):
     else:
         with st.spinner('Consultando a API do Compras.gov.br...'):
             itens, paginas_restantes, total_paginas = obter_itens(
-                tipo_item, codigo_item_catalogo.strip(), pagina, tamanho_pagina
+                tipo_item, 
+                codigo_item_catalogo, 
+                pagina, 
+                tamanho_pagina,
+                data_inicio=data_inicio,
+                data_fim=data_fim
             )
         if itens:
             st.session_state['itens'] = itens
@@ -139,31 +209,49 @@ if st.session_state.get('itens'):
         if isinstance(itens, list) and all(isinstance(item, dict) for item in itens):
             df_completo = pd.json_normalize(itens)
 
-            # DataFrame de exibição: formata preços com ponto de milhar e vírgula decimal
-            df_exibicao = df_completo.map(
+            # Renomeia todas as colunas para português
+            df_completo = df_completo.rename(columns=RENOMEAR_COLUNAS)
+
+            # Pega as colunas que o usuário escolheu (ou todas na primeira vez)
+            if 'colunas_selecionadas' not in st.session_state or not st.session_state['colunas_selecionadas']:
+                st.session_state['colunas_selecionadas'] = list(RENOMEAR_COLUNAS.values())
+
+            colunas_para_mostrar = st.session_state['colunas_selecionadas']
+
+            colunas_para_mostrar = [c for c in COLUNAS_OBRIGATORIAS if c in colunas_para_mostrar] + \
+                       [c for c in colunas_para_mostrar if c not in COLUNAS_OBRIGATORIAS]
+
+            # Interseção das colunas para evitar erros caso a API não retorne todas
+            colunas_existentes = [c for c in colunas_para_mostrar if c in df_completo.columns]
+
+            # DataFrame de exibição (com formatação bonita de preços)
+            df_exibicao = df_completo[colunas_existentes].copy()
+            df_exibicao = df_exibicao.map(
                 lambda x: formatar_preco_reais(x) if isinstance(x, float) else x
             )
-            df_exibicao = df_exibicao.rename(columns=RENOMEAR_COLUNAS)
 
-            # DataFrame de exportação: números com vírgula decimal, sem ponto de milhar
-            # Encoding utf-8-sig (BOM) garante leitura correta no Excel do Windows
-            df_csv = df_completo.map(float_para_csv)
-            df_csv = df_csv.rename(columns=RENOMEAR_COLUNAS)
+            # DataFrame para exportação CSV (mantém números com vírgula)
+            df_csv = df_completo[colunas_existentes].copy()
+            df_csv = df_csv.map(float_para_csv)
 
             st.success(
                 f"Total de páginas: {st.session_state['total_paginas']} | "
                 f"Páginas restantes: {st.session_state['paginas_restantes']}"
             )
-            st.dataframe(df_exibicao)
 
+            # Mostra a tabela apenas com as colunas selecionadas
+            st.dataframe(df_exibicao, use_container_width=True)
+
+            # Download com exatamente as mesmas colunas
             csv = df_csv.to_csv(sep=';', index=False).encode('utf-8-sig')
             st.download_button(
-                label="Download dos dados em CSV",
+                label="📥 Download dos dados em CSV",
                 data=csv,
-                file_name='dados_consulta.csv',
+                file_name='pesquisa_precos.csv',
                 mime='text/csv',
                 type='secondary',
             )
+
         else:
             st.error("Formato dos itens inválido para normalização.")
     except Exception as e:
