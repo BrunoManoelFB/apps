@@ -1,6 +1,6 @@
 # Pesquisa de Preços — Compras.gov.br (adaptado por Bruno Manoel)
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://6u9u9kh8bgu3hktkpvk723.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://suportedadosabertosv2.streamlit.app/)
 
 Aplicação web desenvolvida em **Streamlit** para consulta e exportação de dados de pesquisa de preços do portal [Compras.gov.br](https://www.gov.br/compras).
 
@@ -70,7 +70,7 @@ deactivate
 
 Acesse diretamente pelo navegador, sem necessidade de instalação:
 
-**[https://suportedadoslivres.streamlit.app/](https://6u9u9kh8bgu3hktkpvk723.streamlit.app/)**
+**[https://suportedadoslivres.streamlit.app/](https://suportedadosabertosv2.streamlit.app/)**
 
 ### Local
 
